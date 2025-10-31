@@ -2,7 +2,11 @@
 Django admin configuration for API models.
 """
 from django.contrib import admin
-from .models import Category, Product, Review, Newsletter
+from .models import (
+    Category, Product, Review, Newsletter, UserProfile, Banner, Voucher,
+    SalesAnalytics, Order, OrderItem, OrderTracking, Refund,
+    Watchlist, ProductReview, Complaint, Referral
+)
 
 
 @admin.register(Category)
