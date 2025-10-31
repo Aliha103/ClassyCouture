@@ -18,19 +18,22 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ['name', 'price', 'category', 'featured', 'created_at']
-    list_filter = ['featured', 'category', 'created_at']
-    search_fields = ['name', 'description']
+    list_display = ['name', 'price', 'inventory', 'category', 'featured', 'on_sale', 'discount_percent', 'created_at']
+    list_filter = ['featured', 'on_sale', 'category', 'created_at']
+    search_fields = ['name', 'description', 'sku']
     readonly_fields = ['created_at', 'updated_at']
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'description', 'price')
+            'fields': ('name', 'description', 'price', 'sku')
         }),
         ('Media & Category', {
             'fields': ('image_url', 'category')
         }),
-        ('Visibility', {
-            'fields': ('featured',)
+        ('Inventory', {
+            'fields': ('inventory',)
+        }),
+        ('Sales & Discounts', {
+            'fields': ('featured', 'on_sale', 'discount_percent')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
