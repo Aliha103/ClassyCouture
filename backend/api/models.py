@@ -32,6 +32,10 @@ class Product(models.Model):
     image_url = models.URLField()
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     featured = models.BooleanField(default=False, db_index=True)
+    inventory = models.IntegerField(default=0, validators=[MinValueValidator(0)])  # Stock quantity
+    sku = models.CharField(max_length=50, unique=True, null=True, blank=True)  # Stock Keeping Unit
+    on_sale = models.BooleanField(default=False)
+    discount_percent = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
