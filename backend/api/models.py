@@ -61,6 +61,19 @@ class Product(models.Model):
         """Get count of reviews."""
         return self.reviews.count()
 
+    @property
+    def discounted_price(self):
+        """Calculate discounted price."""
+        if self.on_sale and self.discount_percent > 0:
+            discount_amount = self.price * (self.discount_percent / 100)
+            return round(self.price - discount_amount, 2)
+        return self.price
+
+    @property
+    def is_in_stock(self):
+        """Check if product is in stock."""
+        return self.inventory > 0
+
 
 class Review(models.Model):
     """Customer review model."""
