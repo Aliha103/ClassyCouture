@@ -351,7 +351,7 @@ class ReferralViewSet(viewsets.ReadOnlyModelViewSet):
         """Get user's referrals."""
         referrals = Referral.objects.filter(referrer=request.user)
         serializer = self.get_serializer(referrals, many=True)
-        total_points = referrals.aggregate(total=models.Sum('points_earned'))['total'] or 0
+        total_points = referrals.aggregate(total=Sum('points_earned'))['total'] or 0
         return Response({
             'data': serializer.data,
             'total_points': total_points,
