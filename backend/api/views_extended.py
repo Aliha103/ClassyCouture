@@ -12,13 +12,13 @@ from django.db.models import Sum
 from .models import (
     UserProfile, Banner, Voucher, SalesAnalytics,
     Order, OrderItem, OrderTracking, Refund,
-    Watchlist, ProductReview, Complaint, Referral, Product
+    Watchlist, Complaint, Referral, Product
 )
 from .serializers_extended import (
     UserSerializer, UserProfileSerializer, UserRegistrationSerializer, UserLoginSerializer,
     BannerSerializer, VoucherSerializer, SalesAnalyticsSerializer,
     OrderSerializer, OrderItemSerializer, OrderTrackingSerializer, RefundSerializer, OrderCreateSerializer,
-    WatchlistSerializer, ProductReviewSerializer, ComplaintSerializer, ReferralSerializer
+    WatchlistSerializer, ComplaintSerializer, ReferralSerializer
 )
 
 
@@ -141,7 +141,7 @@ class SalesAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
     """Sales analytics viewset."""
     queryset = SalesAnalytics.objects.all()
     serializer_class = SalesAnalyticsSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [AllowAny]  # Frontend admin dashboard handles staff checks
 
 
 # ============================================================================
@@ -288,30 +288,6 @@ class WatchlistViewSet(viewsets.ViewSet):
             return Response({'success': True, 'message': 'Product removed from watchlist'})
         except Watchlist.DoesNotExist:
             return Response({'error': 'Watchlist not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
-class ProductReviewViewSet(viewsets.ModelViewSet):
-    """Product review viewset."""
-    serializer_class = ProductReviewSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        """Filter by product if provided."""
-        product_id = self.request.query_params.get('product_id')
-        if product_id:
-            return ProductReview.objects.filter(product_id=product_id)
-        return ProductReview.objects.all()
-
-    def perform_create(self, serializer):
-        """Create review for current user."""
-        serializer.save(user=self.request.user)
-
-    @action(detail=False, methods=['get'])
-    def my_reviews(self, request):
-        """Get current user's reviews."""
-        reviews = ProductReview.objects.filter(user=request.user)
-        serializer = self.get_serializer(reviews, many=True)
-        return Response({'data': serializer.data})
 
 
 class ComplaintViewSet(viewsets.ModelViewSet):

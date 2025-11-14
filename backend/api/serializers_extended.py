@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from .models import (
     UserProfile, Banner, Voucher, SalesAnalytics,
     Order, OrderItem, OrderTracking, Refund,
-    Watchlist, ProductReview, Complaint, Referral, Product
+    Watchlist, Complaint, Referral, Product
 )
 
 
@@ -185,19 +185,6 @@ class WatchlistSerializer(serializers.ModelSerializer):
     def get_products(self, obj):
         from .serializers import ProductSerializer
         return ProductSerializer(obj.products.all(), many=True).data
-
-
-class ProductReviewSerializer(serializers.ModelSerializer):
-    """Product review serializer."""
-    username = serializers.CharField(source='user.username', read_only=True)
-    product_name = serializers.CharField(source='product.name', read_only=True)
-
-    class Meta:
-        model = ProductReview
-        fields = [
-            'id', 'product', 'product_name', 'user', 'username', 'rating', 'title',
-            'review_text', 'is_verified_purchase', 'helpful_count', 'created_at', 'updated_at'
-        ]
 
 
 class ComplaintSerializer(serializers.ModelSerializer):

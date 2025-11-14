@@ -9,19 +9,61 @@ import uuid
 
 
 class Category(models.Model):
-    """Product category model."""
-    name = models.CharField(max_length=100, unique=True)
+    """Product category model with hierarchical support for collections."""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
     description = models.TextField(blank=True)
     image_url = models.URLField()
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        related_name='subcategories',
+        null=True,
+        blank=True,
+        help_text="Parent category (for sub-collections)"
+    )
+    is_collection = models.BooleanField(
+        default=False,
+        help_text="Mark as top-level collection"
+    )
+    display_order = models.IntegerField(
+        default=0,
+        help_text="Order in which to display (lower numbers first)"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name_plural = "categories"
-        ordering = ['name']
+        ordering = ['display_order', 'name']
+        unique_together = [['parent', 'name']]
 
     def __str__(self):
+        if self.parent:
+            return f"{self.parent.name} > {self.name}"
         return self.name
+
+    def save(self, *args, **kwargs):
+        """Auto-generate slug from name if not provided."""
+        if not self.slug:
+            from django.utils.text import slugify
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def get_all_children(self):
+        """Get all descendant categories recursively."""
+        children = list(self.subcategories.all())
+        for child in list(children):
+            children.extend(child.get_all_children())
+        return children
+
+    @property
+    def product_count(self):
+        """Get total number of products in this category and subcategories."""
+        count = self.products.count()
+        for child in self.subcategories.all():
+            count += child.product_count
+        return count
 
 
 class Product(models.Model):
@@ -32,6 +74,7 @@ class Product(models.Model):
     image_url = models.URLField()
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     featured = models.BooleanField(default=False, db_index=True)
+    new_arrival = models.BooleanField(default=False, db_index=True)  # Mark products as new arrivals
     inventory = models.IntegerField(default=0, validators=[MinValueValidator(0)])  # Stock quantity
     sku = models.CharField(max_length=50, unique=True, null=True, blank=True)  # Stock Keeping Unit
     on_sale = models.BooleanField(default=False)
@@ -43,6 +86,7 @@ class Product(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['featured', '-created_at']),
+            models.Index(fields=['new_arrival', '-created_at']),
         ]
 
     def __str__(self):
@@ -324,26 +368,6 @@ class Watchlist(models.Model):
         return f"Watchlist - {self.user.username}"
 
 
-class ProductReview(models.Model):
-    """User product reviews."""
-    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='user_reviews')
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='product_reviews')
-    rating = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
-    title = models.CharField(max_length=200)
-    review_text = models.TextField()
-    is_verified_purchase = models.BooleanField(default=False)
-    helpful_count = models.IntegerField(default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['-created_at']
-        unique_together = ['product', 'user']
-
-    def __str__(self):
-        return f"Review - {self.user.username} for {self.product.name}"
-
-
 class Complaint(models.Model):
     """Product complaints/issues."""
     STATUS_CHOICES = [
@@ -384,3 +408,54 @@ class Referral(models.Model):
 
     def __str__(self):
         return f"Referral - {self.referrer.username} → {self.referred_user.username}"
+
+
+class ChatSession(models.Model):
+    """Live chat session between customer and support staff."""
+    STATUS_CHOICES = [
+        ('waiting', 'Waiting'),
+        ('active', 'Active'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_sessions', null=True, blank=True)
+    guest_name = models.CharField(max_length=100, blank=True)
+    guest_email = models.EmailField(blank=True)
+    assigned_to = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='assigned_chats',
+        limit_choices_to={'is_staff': True}
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        if self.user:
+            return f"Chat - {self.user.username} ({self.status})"
+        return f"Chat - {self.guest_name} ({self.status})"
+
+
+class ChatMessage(models.Model):
+    """Individual message in a chat session."""
+    session = models.ForeignKey(ChatSession, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    sender_name = models.CharField(max_length=100)
+    is_staff = models.BooleanField(default=False)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.sender_name}: {self.message[:50]}"

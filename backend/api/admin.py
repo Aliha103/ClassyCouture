@@ -5,7 +5,7 @@ from django.contrib import admin
 from .models import (
     Category, Product, Review, Newsletter, UserProfile, Banner, Voucher,
     SalesAnalytics, Order, OrderItem, OrderTracking, Refund,
-    Watchlist, ProductReview, Complaint, Referral
+    Watchlist, Complaint, Referral
 )
 
 
@@ -200,14 +200,6 @@ class RefundAdmin(admin.ModelAdmin):
             'fields': ('status', 'processed_by', 'processed_at', 'admin_notes')
         }),
     )
-
-
-@admin.register(ProductReview)
-class ProductReviewAdmin(admin.ModelAdmin):
-    list_display = ['user', 'product', 'rating', 'is_verified_purchase', 'created_at']
-    list_filter = ['rating', 'is_verified_purchase', 'created_at']
-    search_fields = ['user__username', 'product__name', 'title']
-    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(Complaint)
